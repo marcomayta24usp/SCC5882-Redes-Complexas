@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>Detecção espectral em grafos — Seminário SCC5882</title>
+<style>
+:root{
+  --bg:#070b16; --bg2:#0c1326; --panel:#101a31; --panel2:#131f3b; --text:#f4f8ff;
+  --muted:#aab8d1; --cyan:#5ee7ff; --violet:#9b8cff; --gold:#f5c76b; --green:#74e0a5;
+  --red:#ff748e; --blue:#63a6ff; --line:#263555; --shadow:0 22px 55px rgba(0,0,0,.35);
+  --radius:22px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden}
+body::before{content:"";position:fixed;inset:-30%;background:
+ radial-gradient(circle at 20% 20%,rgba(94,231,255,.10),transparent 28%),
+ radial-gradient(circle at 80% 25%,rgba(155,140,255,.11),transparent 25%),
+ radial-gradient(circle at 60% 90%,rgba(116,224,165,.08),transparent 25%);filter:blur(10px);pointer-events:none}
+button,input{font:inherit}
+a{color:var(--cyan)}
+#deck{position:relative;width:100%;height:100%;perspective:1500px}
+.slide{position:absolute;inset:0;padding:54px 68px 54px 68px;opacity:0;pointer-events:none;transform:translate3d(7vw,0,-80px) rotateY(-3deg) scale(.985);transition:opacity .48s ease,transform .58s cubic-bezier(.2,.8,.2,1);overflow:hidden}
+.slide.active{opacity:1;pointer-events:auto;transform:translate3d(0,0,0) rotateY(0) scale(1);z-index:3}
+.slide.prev{transform:translate3d(-7vw,0,-80px) rotateY(3deg) scale(.985)}
+.slide::after{content:"";position:absolute;inset:20px;border:1px solid rgba(255,255,255,.04);border-radius:30px;pointer-events:none}
+.section-label{position:absolute;top:24px;left:68px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--cyan);font-weight:800}
+.slide-no{position:absolute;top:24px;right:68px;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.cite{position:absolute;left:68px;bottom:22px;font-size:11px;color:#8390aa;letter-spacing:.01em;max-width:78%}
+
+h1{font-size:clamp(42px,5.1vw,78px);line-height:1.02;margin:0 0 20px;letter-spacing:-.045em}
+h2{font-size:clamp(30px,3.5vw,52px);line-height:1.07;margin:20px 0 18px;letter-spacing:-.03em}
+h3{font-size:clamp(19px,2vw,28px);line-height:1.15;margin:0 0 14px}
+p,li{font-size:clamp(16px,1.45vw,23px);line-height:1.44;color:#e8eefb}
+p{margin:8px 0 12px}.small{font-size:14px;color:var(--muted)}
+.lead{font-size:clamp(20px,2vw,31px);line-height:1.35;color:#eaf5ff;max-width:1000px}
+.muted{color:var(--muted)} .cyan{color:var(--cyan)} .violet{color:var(--violet)} .gold{color:var(--gold)} .green{color:var(--green)} .red{color:var(--red)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:26px;align-items:stretch}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.card{background:linear-gradient(180deg,rgba(19,31,59,.94),rgba(12,20,39,.88));border:1px solid rgba(121,151,205,.18);border-radius:var(--radius);padding:22px 24px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.card::before{content:"";position:absolute;inset:0;background:linear-gradient(135deg,rgba(94,231,255,.06),transparent 35%,rgba(155,140,255,.05));pointer-events:none}.card>*{position:relative}
+.card.compact{padding:15px 18px}.card h3{color:#fff}.card p,.card li{font-size:17px}
+.metric{font-size:44px;font-weight:850;letter-spacing:-.04em;color:var(--cyan)}
+.kicker{display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border-radius:999px;background:rgba(94,231,255,.08);border:1px solid rgba(94,231,255,.25);color:var(--cyan);font-size:12px;text-transform:uppercase;letter-spacing:.12em;font-weight:800}
+.eq{font-family:"STIX Two Math","Cambria Math",Georgia,serif;font-size:clamp(25px,2.6vw,43px);padding:16px 20px;border-radius:18px;background:rgba(3,8,19,.55);border:1px solid rgba(94,231,255,.16);text-align:center;margin:16px 0;color:#fbfdff}.eq.big{font-size:clamp(34px,4vw,60px)}
+.flow{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;margin:28px 0}.flow .node{min-width:132px;padding:18px 20px;border:1px solid rgba(94,231,255,.26);background:#0e1830;border-radius:18px;text-align:center;font-size:20px;font-weight:750}.arrow{color:var(--cyan);font-size:30px;animation:pulse 1.8s infinite}
+@keyframes pulse{50%{opacity:.35;transform:translateX(4px)}}
+ul.clean{list-style:none;padding:0;margin:10px 0}ul.clean li{padding:8px 0 8px 28px;position:relative}ul.clean li::before{content:"→";position:absolute;left:0;color:var(--cyan);font-weight:900}
+.reveal{opacity:0;transform:translateY(18px);filter:blur(4px);transition:.45s ease}.reveal.show{opacity:1;transform:none;filter:none}
+.fade-seq>*{opacity:0;transform:translateY(12px);transition:.45s}.active .fade-seq>*{opacity:1;transform:none}.active .fade-seq>*:nth-child(2){transition-delay:.12s}.active .fade-seq>*:nth-child(3){transition-delay:.24s}.active .fade-seq>*:nth-child(4){transition-delay:.36s}.active .fade-seq>*:nth-child(5){transition-delay:.48s}
+.matrix{display:inline-grid;gap:4px;padding:10px;border-left:2px solid #cdd7ea;border-right:2px solid #cdd7ea;border-radius:6px}.matrix.r4{grid-template-columns:repeat(4,34px)}.matrix.r3{grid-template-columns:repeat(3,34px)}.matrix span{display:grid;place-items:center;height:30px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:16px;border-radius:6px}.matrix .diag{background:rgba(245,199,107,.14);color:var(--gold)}.matrix .edge{background:rgba(94,231,255,.12);color:var(--cyan)}
+.graphbox{position:relative;background:radial-gradient(circle at 50% 40%,rgba(94,231,255,.055),rgba(2,6,16,.35));border:1px solid rgba(121,151,205,.15);border-radius:24px;min-height:300px;overflow:hidden}.graphbox svg{width:100%;height:100%;display:block}.edge-svg{stroke:#536786;stroke-width:2;opacity:.62}.edge-svg.bridge{stroke:var(--gold);stroke-width:4}.node-svg{stroke:#e9f8ff;stroke-width:1.4;transition:fill .25s,transform .25s,opacity .25s}.node-label{fill:#07101e;font:700 10px system-ui;pointer-events:none}.node-a{fill:var(--cyan)}.node-b{fill:var(--violet)}.node-neutral{fill:#cdd8ec}
+.pillrow{display:flex;gap:10px;flex-wrap:wrap}.pill{padding:8px 12px;border-radius:999px;background:#111d37;border:1px solid #2b3c60;color:#dce8ff;font-size:14px}.pill strong{color:var(--cyan)}
+.table{width:100%;border-collapse:separate;border-spacing:0;overflow:hidden;border-radius:16px;border:1px solid #263555}.table th,.table td{padding:12px 14px;border-bottom:1px solid #263555;border-right:1px solid #263555;text-align:left;font-size:15px}.table th{background:#14203b;color:#fff}.table td{background:#0d172b;color:#dce7fa}.table tr:last-child td{border-bottom:none}.table th:last-child,.table td:last-child{border-right:none}
+.code-wrap{position:relative;background:#060a13;border:1px solid #253655;border-radius:18px;overflow:hidden;box-shadow:var(--shadow)}.code-head{height:38px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:#0d1423;border-bottom:1px solid #22314d;color:#9aaccc;font-size:12px}.dots{display:flex;gap:6px}.dot{width:9px;height:9px;border-radius:50%;background:#59657a}.dot:nth-child(1){background:#ff6f7f}.dot:nth-child(2){background:#f6c96c}.dot:nth-child(3){background:#6edd9f}.copy{background:#111e36;color:#bcd0f6;border:1px solid #2a3c61;padding:5px 9px;border-radius:8px;cursor:pointer;font-size:11px}.copy:hover{border-color:var(--cyan);color:#fff}.code{margin:0;padding:18px 20px;white-space:pre;overflow:auto;font:13.5px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#dce8fa;max-height:520px}.kw{color:#d39bff}.fn{color:#5ee7ff}.str{color:#74e0a5}.num{color:#f5c76b}.cm{color:#7183a4}.op{color:#ff94aa}
+.btn{border:1px solid #314768;background:#12203b;color:#eaf3ff;padding:9px 13px;border-radius:11px;cursor:pointer;font-weight:700;font-size:13px}.btn:hover,.btn.active{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(94,231,255,.09);color:#fff}.btn.gold:hover,.btn.gold.active{border-color:var(--gold);box-shadow:0 0 0 3px rgba(245,199,107,.08)}
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.slider{width:100%;accent-color:#5ee7ff}.interactive-panel{background:#0b1529;border:1px solid #2a3b5d;border-radius:20px;padding:16px 18px}.interactive-panel label{font-size:13px;color:#b9c8e1}.value-chip{display:inline-block;min-width:70px;text-align:center;padding:5px 8px;border-radius:8px;background:#162746;color:var(--cyan);font:700 13px ui-monospace,monospace}
+#progress{position:fixed;left:0;bottom:0;height:4px;background:linear-gradient(90deg,var(--cyan),var(--violet));width:0;z-index:30;transition:width .35s}
+#nav{position:fixed;right:18px;top:50%;transform:translateY(-50%);z-index:40;display:flex;flex-direction:column;gap:8px}.navbtn{width:34px;height:34px;border-radius:50%;border:1px solid rgba(146,169,207,.25);background:rgba(8,14,28,.76);color:#dfe9fc;cursor:pointer;backdrop-filter:blur(10px)}.navbtn:hover{border-color:var(--cyan)}
+#timer{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:45;padding:7px 12px;border-radius:999px;background:rgba(5,10,21,.75);border:1px solid #243754;color:#b9c9e7;font:700 12px ui-monospace,monospace;display:none;backdrop-filter:blur(10px)}
+#overview{position:fixed;inset:0;z-index:80;background:#050914;display:none;overflow:auto;padding:34px}.thumb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px}.thumb{background:#101a31;border:1px solid #293b5c;border-radius:14px;padding:14px;cursor:pointer;min-height:125px}.thumb:hover{border-color:var(--cyan);transform:translateY(-2px)}.thumb b{display:block;color:var(--cyan);font-size:11px;margin-bottom:7px}.thumb div{font-size:16px;font-weight:800}.thumb p{font-size:12px;color:var(--muted)}
+#help{position:fixed;inset:0;z-index:90;background:rgba(2,5,12,.88);display:none;place-items:center;backdrop-filter:blur(8px)}#help .modal{width:min(700px,90vw);background:#0e1930;border:1px solid #2b3d62;border-radius:24px;padding:28px}.kbd{display:inline-block;min-width:28px;padding:4px 7px;border-radius:7px;background:#16233d;border:1px solid #33496f;color:#fff;font:700 12px ui-monospace,monospace;text-align:center}
+.hero{display:grid;grid-template-columns:1.15fr .85fr;gap:40px;height:100%;align-items:center}.hero .subtitle{font-size:20px;color:var(--muted);max-width:720px}.hero-mark{position:relative;height:480px}.orb{position:absolute;border-radius:50%;filter:drop-shadow(0 16px 28px rgba(0,0,0,.35))}.orb.a{width:260px;height:260px;left:30px;top:80px;background:radial-gradient(circle at 30% 30%,#a8f6ff,var(--cyan) 25%,#17435a 65%,#0a1522)}.orb.b{width:190px;height:190px;right:20px;bottom:80px;background:radial-gradient(circle at 30% 30%,#d4ccff,var(--violet) 25%,#3c315e 65%,#101024)}.orb.c{width:95px;height:95px;right:155px;top:70px;background:radial-gradient(circle at 30% 30%,#ffe8a9,var(--gold) 30%,#5f4922 70%)}.orbline{position:absolute;height:2px;background:linear-gradient(90deg,var(--cyan),var(--violet));transform-origin:left center;opacity:.75}
+.timeline{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-top:24px}.timeline .seg{padding:13px 9px;border-radius:14px;background:#0e1930;border:1px solid #253755;text-align:center;font-size:12px;color:#d8e6fb}.timeline .seg span{display:block;color:var(--cyan);font-weight:900;font-size:15px;margin-bottom:5px}
+.spectrum{display:flex;align-items:flex-end;gap:10px;height:220px;padding:18px 12px;border-bottom:1px solid #3a4a67}.bar{flex:1;background:linear-gradient(180deg,var(--cyan),#236f8b);min-width:22px;border-radius:8px 8px 0 0;position:relative;transition:.35s}.bar span{position:absolute;top:-25px;left:50%;transform:translateX(-50%);font:700 11px ui-monospace,monospace;color:#cad9f0}.bar.gap{background:linear-gradient(180deg,var(--gold),#7c5a22)}
+.callout{border-left:4px solid var(--cyan);background:rgba(94,231,255,.06);padding:14px 16px;border-radius:0 14px 14px 0;font-size:17px;color:#e7f5fb}.callout.goldline{border-left-color:var(--gold);background:rgba(245,199,107,.06)}
+.section-break{display:grid;place-items:center;height:100%;text-align:center}.section-break h2{font-size:64px}.section-break .roman{font:900 16px ui-monospace,monospace;letter-spacing:.2em;color:var(--cyan)}
+.countdown{font:900 clamp(70px,10vw,150px) ui-monospace,monospace;letter-spacing:-.06em;color:var(--cyan);text-shadow:0 0 32px rgba(94,231,255,.22)}
+.refitem{padding:14px 16px;border-bottom:1px solid #233451}.refitem:last-child{border-bottom:none}.refitem b{color:#fff}.refitem span{color:var(--muted);font-size:14px}
+@media (max-width:900px){.slide{padding:48px 34px}.section-label{left:34px}.slide-no{right:34px}.cite{left:34px}.grid2,.grid3,.grid4,.hero{grid-template-columns:1fr}.hero-mark{display:none}.card p,.card li{font-size:14px}.slide{overflow:auto}.timeline{grid-template-columns:repeat(2,1fr)}}
+
+/* ===== V2: academic visual system ===== */
+:root{
+  --ink:#f7fbff; --soft:#c8d4e8; --deep:#050914; --deep2:#081020;
+  --cyan2:#7be8ff; --violet2:#b4a8ff; --teal:#76e6cf; --amber:#ffd98a;
+}
+html,body{font-family:Aptos,"Segoe UI Variable",Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#050914}
+#deck::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background:
+  linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);
+  background-size:42px 42px;mask-image:linear-gradient(to bottom,rgba(0,0,0,.9),rgba(0,0,0,.08));}
+.slide{padding:58px 70px 66px;}
+.slide::after{inset:17px;border-color:rgba(149,181,232,.075);box-shadow:inset 0 0 80px rgba(76,132,214,.018)}
+.slide.active .card{animation:cardIn .6s cubic-bezier(.2,.75,.2,1) both}
+@keyframes cardIn{from{transform:translateY(8px);opacity:.75}to{transform:none;opacity:1}}
+.section-label{font-size:11px;letter-spacing:.19em;color:#86dff5;display:flex;align-items:center;gap:9px}
+.section-label::before{content:"";width:26px;height:2px;border-radius:2px;background:linear-gradient(90deg,var(--cyan),var(--violet))}
+.slide-no{font-weight:700;letter-spacing:.08em}
+h1{font-weight:850;max-width:1080px;text-wrap:balance}
+h2{font-weight:790;text-wrap:balance}
+h3{font-weight:760}
+.lead{color:#eef6ff}
+.card{border-color:rgba(126,164,226,.20);background:linear-gradient(155deg,rgba(19,33,62,.92),rgba(9,16,32,.9));box-shadow:0 18px 48px rgba(0,0,0,.32),inset 0 1px rgba(255,255,255,.025)}
+.card:hover{border-color:rgba(94,231,255,.32);transform:translateY(-1px);transition:.2s}
+.eq{box-shadow:inset 0 1px rgba(255,255,255,.025);background:linear-gradient(180deg,rgba(5,11,25,.75),rgba(8,16,33,.7))}
+.callout{box-shadow:inset 0 0 32px rgba(94,231,255,.025)}
+.cite{bottom:22px;max-width:61%;color:#8494ae;font-size:10.5px}
+.author-footer{position:absolute;right:70px;bottom:21px;z-index:8;text-align:right;color:#9fb0ca;font-size:10.5px;letter-spacing:.035em;white-space:nowrap}
+.author-footer strong{color:#d8e6fa;font-weight:700}
+.academic-note{margin-top:14px;padding:12px 14px;border:1px solid rgba(125,157,211,.16);border-radius:14px;background:rgba(7,14,28,.52);color:#cbd9ed;font-size:14px;line-height:1.45}
+.academic-note b{color:#f1f7ff}
+.concept-strip{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 2px}
+.concept-strip span{display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(116,224,165,.18);background:rgba(116,224,165,.055);color:#d9f7e7;border-radius:999px;padding:7px 10px;font-size:12px;font-weight:650}
+.definition{border:1px solid rgba(155,140,255,.20);background:rgba(155,140,255,.055);border-radius:16px;padding:14px 16px;color:#e8e3ff;font-size:15px;line-height:1.45}
+.definition .term{font-size:11px;text-transform:uppercase;letter-spacing:.13em;color:#bcb2ff;font-weight:800;display:block;margin-bottom:5px}
+.terminal{background:#03060c;border:1px solid #26334c;border-radius:17px;overflow:hidden;box-shadow:0 18px 42px rgba(0,0,0,.35)}
+.terminal-head{height:35px;display:flex;align-items:center;justify-content:space-between;padding:0 13px;background:#0b101b;border-bottom:1px solid #202b40;color:#96a7bf;font:11px ui-monospace,monospace}
+.terminal-body{padding:14px 16px;color:#cde8d5;white-space:pre-wrap;font:12.5px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;min-height:82px}
+.live-badge{display:inline-flex;gap:8px;align-items:center;padding:7px 11px;border-radius:999px;border:1px solid rgba(255,116,142,.26);background:rgba(255,116,142,.06);color:#ff9cad;font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:800}
+.live-badge::before{content:"";width:7px;height:7px;border-radius:50%;background:#ff748e;box-shadow:0 0 12px #ff748e;animation:livePulse 1.4s infinite}
+@keyframes livePulse{50%{opacity:.3}}
+.demo-steps{counter-reset:demo;display:grid;gap:9px;margin-top:16px}
+.demo-steps div{counter-increment:demo;display:grid;grid-template-columns:30px 1fr;gap:10px;align-items:start;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.05);font-size:14px;color:#d8e5f7}
+.demo-steps div::before{content:counter(demo);display:grid;place-items:center;width:25px;height:25px;border-radius:50%;background:rgba(94,231,255,.10);color:var(--cyan);font-weight:850}
+.output-toggle{background:#132440;color:#dbeaff;border:1px solid #315078;padding:7px 11px;border-radius:9px;cursor:pointer;font-size:11px;font-weight:700}
+.output-toggle:hover{border-color:var(--cyan)}
+.energy-widget{display:grid;grid-template-columns:1fr 120px;gap:14px;align-items:center;margin-top:14px}.energy-value{font:850 28px ui-monospace,monospace;color:var(--cyan);text-align:center}.energy-bar{height:10px;background:#101a2c;border-radius:8px;overflow:hidden;margin-top:8px}.energy-fill{height:100%;width:0;background:linear-gradient(90deg,var(--green),var(--gold),var(--red));transition:width .25s}
+.comb-widget{display:grid;grid-template-columns:1fr 165px;gap:15px;align-items:center}.comb-number{font:850 24px ui-monospace,monospace;color:var(--gold);text-align:right}
+.section-ribbon{position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--cyan),var(--violet),transparent 80%);opacity:.72}
+.code-wrap{border-color:#2d4265}.code{font-size:13px;max-height:430px}.code-head{background:linear-gradient(180deg,#0f1727,#0a101b)}
+@media(max-width:900px){.author-footer{right:34px}.cite{max-width:55%}.slide{padding-bottom:74px}}
+</style>
+</head>
+<body>
+<div id="deck">
+<section class="slide active" data-notes="Abrir com a pergunta: como uma matriz pode revelar estrutura que não está explícita em uma aresta isolada?" data-section="Abertura" data-title="Detecção espectral em grafos"><div class="section-ribbon"></div>
+<div class="section-label">SCC5882 · Redes Complexas</div><div class="slide-no"></div>
+<div class="hero">
+<div>
+<span class="kicker">Seminário · 40 minutos</span>
+<h1>Detecção espectral<br/><span class="cyan">em grafos</span></h1>
+<p class="subtitle">Do Laplaciano à detecção de comunidades: operadores, autovetores, relaxações e evidência empírica.</p>
+<div class="pillrow" style="margin-top:28px">
+<span class="pill"><strong>von Luxburg</strong> 2007</span><span class="pill"><strong>Newman</strong> 2006</span><span class="pill"><strong>Newman</strong> 2013</span>
+</div>
+<p class="small" style="margin-top:28px;font-size:15px;color:#c8d8ef;letter-spacing:.025em"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</p>
+</div>
+<div aria-hidden="true" class="hero-mark">
+<div class="orb a"></div><div class="orb b"></div><div class="orb c"></div>
+<div class="orbline" style="width:260px;left:235px;top:210px;transform:rotate(17deg)"></div>
+<div class="orbline" style="width:160px;left:300px;top:185px;transform:rotate(-40deg)"></div>
+<div class="orbline" style="width:180px;left:150px;top:290px;transform:rotate(35deg)"></div>
+</div>
+</div>
+<div class="cite">Tema oficial do seminário: “Detecção espectral em grafos”.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-notes="Não começar por fórmulas. Mostrar o problema estrutural primeiro." data-section="Motivação" data-title="O problema"><div class="section-ribbon"></div>
+<div class="section-label">I · Motivação</div><div class="slide-no"></div>
+<h2>O problema: <span class="cyan">estrutura oculta</span> em grafos</h2>
+<div class="grid2" style="height:72%;align-items:center">
+<div>
+<p class="lead">Dado um grafo, como identificar <b>partições</b>, <b>comunidades</b> ou <b>gargalos</b> usando apenas o padrão de conectividade?</p>
+<div class="reveal" data-step="1"><div class="callout">A dificuldade cresce quando a rede deixa de ser visualmente interpretável.</div></div>
+<div class="reveal" data-step="2"><ul class="clean"><li>muitas ligações dentro dos grupos;</li><li>poucas ligações entre grupos;</li><li>não queremos enumerar todas as partições possíveis.</li></ul></div>
+</div>
+<div class="graphbox" id="motivationGraph" style="height:420px"></div>
+</div>
+<div class="concept-strip reveal" data-step="2"><span>entrada: G=(V,E)</span><span>saída: partição C₁,…,Cₖ</span><span>critério: estrutura global</span></div><div class="cite">Estrutura comunitária e particionamento de grafos: problema central considerado no seminário.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Motivação" data-title="O paradigma espectral"><div class="section-ribbon"></div>
+<div class="section-label">I · Motivação</div><div class="slide-no"></div>
+<h2>O paradigma <span class="cyan">espectral</span></h2>
+<p class="lead">A ideia central não é “usar um algoritmo específico”, mas transformar estrutura combinatória em informação algébrica.</p>
+<div class="flow" style="margin-top:58px">
+<div class="node reveal" data-step="1">Grafo<br/><span class="small">G=(V,E)</span></div><div class="arrow">→</div>
+<div class="node reveal" data-step="2">Operador<br/><span class="small">A, L, B, …</span></div><div class="arrow">→</div>
+<div class="node reveal" data-step="3">Espectro<br/><span class="small">(λ, v)</span></div><div class="arrow">→</div>
+<div class="node reveal" data-step="4">Estrutura<br/><span class="small">cortes · grupos</span></div>
+</div>
+<div class="grid3" style="margin-top:42px">
+<div class="card reveal" data-step="5"><h3>Operador</h3><p>Escolhe o que a matriz codifica.</p></div>
+<div class="card reveal" data-step="6"><h3>Autovetores</h3><p>Fornecem direções estruturais privilegiadas.</p></div>
+<div class="card reveal" data-step="7"><h3>Partição</h3><p>Transforma coordenadas espectrais em grupos.</p></div>
+</div>
+<div class="academic-note reveal" data-step="1"><b>Hipótese de modelagem.</b> O espectro não possui uma interpretação única: a leitura depende do operador escolhido e da função objetivo que ele representa.</div><div class="cite">Princípio metodológico: diferentes operadores codificam diferentes noções de estrutura.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Motivação" data-title="Artigos base"><div class="section-ribbon"></div>
+<div class="section-label">I · Motivação</div><div class="slide-no"></div>
+<h2>Artigos base e <span class="cyan">papel científico</span></h2>
+<div class="grid3" style="margin-top:30px">
+<div class="card reveal" data-step="1"><span class="kicker">Artigo base A</span><h3 style="margin-top:16px">von Luxburg (2007)</h3><p><i>A Tutorial on Spectral Clustering</i></p><ul class="clean"><li>Laplacianos</li><li>graph cuts</li><li>spectral clustering</li><li>random walks</li></ul><p class="small">Statistics and Computing 17, 395–416.</p></div>
+<div class="card reveal" data-step="2"><span class="kicker">Artigo base B</span><h3 style="margin-top:16px">Newman (2006)</h3><p><i>Finding community structure in networks using the eigenvectors of matrices</i></p><ul class="clean"><li>modularidade</li><li>modularity matrix</li><li>leading eigenvector</li></ul><p class="small">Physical Review E 74, 036104.</p></div>
+<div class="card reveal" data-step="3"><span class="kicker">Síntese</span><h3 style="margin-top:16px">Newman (2013)</h3><p><i>Spectral methods for community detection and graph partitioning</i></p><ul class="clean"><li>normalized cuts</li><li>modularidade</li><li>inferência estatística</li></ul><p class="small">Physical Review E 88, 042822.</p></div>
+</div>
+<div class="concept-strip"><span>VL07 · base metodológica</span><span>N06 · community detection</span><span>N13 · síntese teórica</span></div><div class="cite">[VL07] von Luxburg, 2007 · [N06] Newman, 2006 · [N13] Newman, 2013.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Motivação" data-title="Roteiro"><div class="section-ribbon"></div>
+<div class="section-label">I · Motivação</div><div class="slide-no"></div>
+<h2>Roteiro científico do seminário</h2>
+<p class="lead">O argumento avança de propriedades do Laplaciano até duas formulações distintas de detecção espectral.</p>
+<div class="timeline">
+<div class="seg"><span>04'</span>Problema</div><div class="seg"><span>08'</span>Fundamentos</div><div class="seg"><span>09'</span>Particionamento</div><div class="seg"><span>06'</span>Clustering</div><div class="seg"><span>06'</span>Newman</div><div class="seg"><span>05'</span>Experimento</div><div class="seg"><span>02'</span>Fechamento</div>
+</div>
+<div class="flow" style="margin-top:66px"><div class="node">Laplaciano</div><div class="arrow">→</div><div class="node">Fiedler</div><div class="arrow">→</div><div class="node">Clustering</div><div class="arrow">→</div><div class="node">Modularidade</div></div>
+<div class="cite">Organização do argumento: Laplaciano → relaxação → clustering → modularidade → comparação empírica.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Fundamentos" data-title="Do grafo às matrizes"><div class="section-ribbon"></div>
+<div class="section-label">II · Fundamentos espectrais</div><div class="slide-no"></div>
+<h2>Do grafo aos <span class="cyan">operadores matriciais</span></h2>
+<div class="grid2" style="margin-top:18px">
+<div class="graphbox" id="tinyGraph" style="height:390px"></div>
+<div>
+<div class="grid2" style="gap:14px">
+<div class="card compact"><h3>A · adjacência</h3><div class="matrix r4" id="matA"></div></div>
+<div class="card compact"><h3>D · graus</h3><div class="matrix r4" id="matD"></div></div>
+</div>
+<div class="eq big reveal" data-step="1">L = D − A</div>
+<p class="reveal" data-step="2">O Laplaciano combina <b>estrutura local</b> (grau) e <b>conectividade</b> (adjacência) em um único operador.</p>
+</div>
+</div>
+<div class="academic-note"><b>Leitura elemento a elemento.</b> A<sub>ij</sub> codifica adjacência; D<sub>ii</sub>=d<sub>i</sub>; no Laplaciano combinatório, L<sub>ii</sub>=d<sub>i</sub> e L<sub>ij</sub>=−A<sub>ij</sub> para i≠j.</div><div class="cite">[VL07] Seção sobre graph Laplacians.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Fundamentos" data-title="O espectro do Laplaciano"><div class="section-ribbon"></div>
+<div class="section-label">II · Fundamentos espectrais</div><div class="slide-no"></div>
+<h2>O Laplaciano e seu <span class="cyan">espectro</span></h2>
+<div class="grid2" style="margin-top:24px;align-items:center">
+<div>
+<div class="eq big">L v = λ v</div>
+<p class="lead">Para grafos não dirigidos, L é simétrico: seus autovalores são reais e podemos ordenar</p>
+<div class="eq reveal" data-step="1">0 = λ₁ ≤ λ₂ ≤ ··· ≤ λₙ</div>
+</div>
+<div class="card fade-seq">
+<h3>Leitura do espectro</h3>
+<p><span class="cyan">λ</span> → escala / modo estrutural</p>
+<p><span class="violet">v</span> → coordenada associada aos vértices</p>
+<p><span class="gold">ordem</span> → separa modos triviais de modos informativos</p>
+<p class="small">A pergunta não é apenas “quais são os autovalores?”, mas “que propriedade da rede cada modo expressa?”.</p>
+</div>
+</div>
+<div class="concept-strip"><span>autovalor = escala do modo</span><span>autovetor = coordenada sobre os vértices</span><span>subespaço = estrutura de baixa frequência</span></div><div class="cite">[VL07] Propriedades básicas dos Laplacianos.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Fundamentos" data-title="O que o espectro codifica"><div class="section-ribbon"></div>
+<div class="section-label">II · Fundamentos espectrais</div><div class="slide-no"></div>
+<h2>O que o espectro <span class="cyan">codifica?</span></h2>
+<div class="grid3" style="margin-top:36px">
+<div class="card reveal" data-step="1"><div class="metric">0</div><h3>Autovalor trivial</h3><p>L1=0, pois cada linha de L soma zero.</p></div>
+<div class="card reveal" data-step="2"><div class="metric">c</div><h3>Componentes</h3><p>A multiplicidade de λ=0 corresponde ao número de componentes conexas.</p></div>
+<div class="card reveal" data-step="3"><div class="metric">≥0</div><h3>Semidefinição</h3><p>Todos os autovalores do Laplaciano combinatório são não negativos.</p></div>
+</div>
+<div class="eq reveal" data-step="4" style="margin-top:36px">propriedades algébricas ⇄ propriedades topológicas</div>
+<div class="academic-note"><b>Consequência.</b> dim ker(L) fornece o número de componentes conexas. Em redes quase desconectadas, autovalores pequenos substituem os zeros exatos e revelam separações fracas.</div><div class="cite">[VL07] Propriedades do Laplaciano; resultado clássico de spectral graph theory.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Fundamentos" data-title="Energia e suavidade"><div class="section-ribbon"></div>
+<div class="section-label">II · Fundamentos espectrais</div><div class="slide-no"></div>
+<h2>Energia do grafo e <span class="cyan">suavidade</span></h2>
+<div class="eq big">xᵀLx = ½ Σᵢⱼ Aᵢⱼ (xᵢ − xⱼ)²</div>
+<div class="grid2" style="margin-top:26px;align-items:center">
+<div class="card">
+<h3>Interpretação</h3>
+<ul class="clean"><li>arestas conectam pares (i,j);</li><li>diferenças grandes xᵢ−xⱼ custam energia;</li><li>vetores de baixa energia variam lentamente ao longo das arestas.</li></ul>
+</div>
+<div class="graphbox" id="smoothGraph" style="height:330px"></div>
+</div>
+<div class="callout reveal" data-step="1" style="margin-top:20px">Nodos fortemente conectados tendem a receber coordenadas espectrais semelhantes.</div>
+<div class="interactive-panel" style="margin-top:14px"><label>Diferença em uma aresta: Δ=xᵢ−xⱼ <input class="slider" id="energySlider" max="2" min="0" step="0.05" type="range" value="0.6"/></label><div class="energy-widget"><div><div class="energy-bar"><div class="energy-fill" id="energyFill"></div></div><p class="small">Contribuição local proporcional a wᵢⱼ·Δ².</p></div><div class="energy-value" id="energyVal">0.36</div></div></div><div class="cite">[VL07] Forma quadrática do Laplaciano.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Fundamentos" data-title="Componentes e zeros"><div class="section-ribbon"></div>
+<div class="section-label">II · Fundamentos espectrais</div><div class="slide-no"></div>
+<h2>Dois componentes, <span class="cyan">dois zeros</span></h2>
+<div class="grid2" style="align-items:center;margin-top:28px">
+<div class="graphbox" id="componentsGraph" style="height:360px"></div>
+<div>
+<div class="eq">λ₁ = 0, λ₂ = 0, λ₃ &gt; 0</div>
+<p class="lead">Vetores constantes em cada componente pertencem ao núcleo de L.</p>
+<div class="reveal" data-step="1"><div class="callout goldline">Isso é o caso ideal: grupos completamente separados tornam-se subespaços espectrais exatos.</div></div>
+<p class="reveal" data-step="2">Quando conectamos os componentes por poucas arestas, o segundo zero se desloca para um valor <b>pequeno, mas positivo</b>.</p>
+</div>
+</div>
+<div class="definition"><span class="term">Caso ideal × caso quase desconectado</span>Componentes independentes geram indicadores exatos no núcleo de L; poucas arestas entre os blocos perturbam esses modos e produzem autovalores pequenos, porém positivos.</div><div class="cite">[VL07; F73] Núcleo do Laplaciano, componentes conexas e conectividade algébrica.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Fundamentos" data-title="Conectividade algébrica"><div class="section-ribbon"></div>
+<div class="section-label">II · Fundamentos espectrais</div><div class="slide-no"></div>
+<h2>λ₂: <span class="cyan">conectividade algébrica</span></h2>
+<div class="grid2" style="margin-top:22px;align-items:center">
+<div>
+<div class="eq big">λ₂</div>
+<ul class="clean"><li>λ₂=0 ⇢ grafo desconectado;</li><li>λ₂&gt;0 ⇢ grafo conectado;</li><li>λ₂ pequeno ⇢ possível gargalo estrutural.</li></ul>
+<div class="callout reveal" data-step="1">O valor de λ₂ responde “quão difícil é separar a rede?”, mas não diz sozinho onde cortar.</div>
+</div>
+<div class="graphbox" id="bottleneckGraph" style="height:390px"></div>
+</div>
+<div class="concept-strip"><span>λ₂ mede coesão global</span><span>v₂ localiza a separação</span><span>pequeno ≠ comunidade garantida</span></div><div class="cite">[F73] Fiedler, M. (1973). Algebraic connectivity of graphs.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Particionamento" data-title="Fiedler vector"><div class="section-ribbon"></div>
+<div class="section-label">III · Particionamento espectral</div><div class="slide-no"></div>
+<h2>v₂: o <span class="cyan">Fiedler vector</span></h2>
+<div class="grid2" style="gap:22px">
+<div class="interactive-panel">
+<div class="graphbox" id="fiedlerGraph" style="height:370px"></div>
+<div class="controls" style="margin-top:12px"><label style="flex:1">threshold <input class="slider" id="fiedlerThreshold" max="0.4" min="-0.4" step="0.01" type="range" value="0"/></label><span class="value-chip" id="thrVal">0.00</span></div>
+</div>
+<div>
+<div class="eq">L v₂ = λ₂ v₂</div>
+<p>O autovetor associado ao segundo menor autovalor atribui uma coordenada a cada vértice.</p>
+<div class="card compact"><h3>Regra de bipartição</h3><p>C₁={i : v₂(i) ≤ t}<br/>C₂={i : v₂(i) &gt; t}</p></div>
+<p class="small">Interaja com o threshold e observe quais nodos trocam de grupo.</p>
+</div>
+</div>
+<div class="academic-note"><b>Discretização.</b> O sinal é a regra mais simples. Em aplicações, também se pode ordenar v₂ e escolher um limiar que minimize a função de corte.</div><div class="cite">[F73; VL07] Conectividade algébrica e bipartição espectral.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Particionamento" data-title="Graph cut"><div class="section-ribbon"></div>
+<div class="section-label">III · Particionamento espectral</div><div class="slide-no"></div>
+<h2>Particionar o grafo: <span class="cyan">qual objetivo?</span></h2>
+<div class="grid2" style="align-items:center">
+<div class="graphbox" id="cutGraph" style="height:390px"></div>
+<div>
+<div class="eq">cut(S, S̄) = Σᵢ∈S,ⱼ∈S̄ wᵢⱼ</div>
+<p class="lead">Minimizar apenas o corte favorece soluções triviais: separar um único vértice pode custar muito pouco.</p>
+<div class="callout reveal" data-step="1">Precisamos equilibrar <b>separação</b> e <b>tamanho/volume</b> das partes.</div>
+</div>
+</div>
+<div class="academic-note"><b>Objetivo.</b> Um bom corte deve remover pouca conectividade entre grupos sem produzir uma partição degenerada. RatioCut e Ncut formalizam esse compromisso de formas diferentes.</div><div class="cite">[VL07] Graph cuts e motivação para objetivos balanceados.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Particionamento" data-title="RatioCut e Ncut"><div class="section-ribbon"></div>
+<div class="section-label">III · Particionamento espectral</div><div class="slide-no"></div>
+<h2>Objetivos balanceados: <span class="cyan">RatioCut × Ncut</span></h2>
+<div class="grid2" style="margin-top:30px">
+<div class="card"><span class="kicker">Tamanho</span><h3 style="margin-top:16px">RatioCut</h3><div class="eq" style="font-size:26px">cut(A,Ā)(1/|A| + 1/|Ā|)</div><p>Penaliza grupos muito pequenos pelo número de vértices.</p></div>
+<div class="card"><span class="kicker">Volume</span><h3 style="margin-top:16px">Normalized Cut</h3><div class="eq" style="font-size:24px">cut(A,Ā)(1/vol(A) + 1/vol(Ā))</div><p>Normaliza pela soma dos graus, incorporando heterogeneidade estrutural.</p></div>
+</div>
+<div class="callout reveal" data-step="1" style="margin-top:28px">A função objetivo escolhida influencia diretamente qual operador espectral aparece depois da relaxação.</div>
+<div class="concept-strip"><span>RatioCut → tamanho</span><span>Ncut → volume</span><span>Ncut ↔ random walk</span></div><div class="cite">[VL07] RatioCut e normalized cut.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Particionamento" data-title="Problema combinatório"><div class="section-ribbon"></div>
+<div class="section-label">III · Particionamento espectral</div><div class="slide-no"></div>
+<h2>O obstáculo: uma busca <span class="red">combinatória</span></h2>
+<div class="grid2" style="align-items:center;margin-top:26px">
+<div>
+<p class="lead">Uma bipartição associa cada vértice a uma decisão discreta.</p>
+<div class="eq big">sᵢ ∈ {−1,+1}</div>
+<p>O número de possibilidades cresce exponencialmente com n.</p>
+</div>
+<div class="card">
+<h3>Exemplo conceitual</h3>
+<p>n=30 ⇒ mais de <span class="gold"><b>500 milhões</b></span> de bipartições distintas antes de remover simetrias.</p>
+<p class="small">A estratégia espectral substitui a busca discreta por um problema contínuo tratável por álgebra linear.</p>
+</div>
+</div>
+<div class="interactive-panel" style="margin-top:14px"><div class="comb-widget"><label>número de vértices n <input class="slider" id="combSlider" max="50" min="10" step="1" type="range" value="30"/></label><div><div class="value-chip" id="combN">n=30</div><div class="comb-number" id="combCount">≈5.37×10⁸</div></div></div><p class="small">Bipartições não orientadas aproximadas: 2ⁿ⁻¹−1.</p></div><div class="cite">[VL07] Formulações de corte e relaxação contínua.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Particionamento" data-title="Relaxação espectral"><div class="section-ribbon"></div>
+<div class="section-label">III · Particionamento espectral</div><div class="slide-no"></div>
+<h2>A ideia central: <span class="cyan">relaxação espectral</span></h2>
+<div class="flow" style="margin-top:36px">
+<div class="node reveal" data-step="1">partição<br/><span class="small">sᵢ∈{−1,+1}</span></div><div class="arrow">→</div>
+<div class="node reveal" data-step="2">relaxar<br/><span class="small">xᵢ∈ℝ</span></div><div class="arrow">→</div>
+<div class="node reveal" data-step="3">Rayleigh<br/><span class="small">xᵀLx/xᵀx</span></div><div class="arrow">→</div>
+<div class="node reveal" data-step="4">autovetor<br/><span class="small">v₂</span></div>
+</div>
+<div class="eq big reveal" data-step="5">λ₂ = min<sub>x ⟂ 1, x≠0</sub> (xᵀLx)/(xᵀx)</div>
+<div class="grid2" style="margin-top:22px">
+<div class="card compact reveal" data-step="6"><h3>Antes</h3><p>espaço discreto e não convexo.</p></div>
+<div class="card compact reveal" data-step="7"><h3>Depois</h3><p>otimização contínua resolvida por um autoproblema.</p></div>
+</div>
+<div class="academic-note"><b>Ponto matemático central.</b> A relaxação preserva a função objetivo, mas substitui rótulos discretos por coordenadas contínuas. O problema resultante é resolvido por uma caracterização variacional do espectro.</div><div class="cite">[VL07] Derivação de spectral clustering por graph cuts.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Particionamento" data-title="Por que v2?"><div class="section-ribbon"></div>
+<div class="section-label">III · Particionamento espectral</div><div class="slide-no"></div>
+<h2>Por que exatamente <span class="cyan">v₂</span>?</h2>
+<div class="grid2" style="align-items:center;margin-top:34px">
+<div>
+<div class="eq">v₁ ∝ 1</div>
+<p>O primeiro autovetor é constante: não separa vértices.</p>
+<div class="eq reveal" data-step="1">v₂ = argmin<sub>x ⟂ 1</sub> xᵀLx / xᵀx</div>
+</div>
+<div class="card reveal" data-step="2"><h3>Interpretação</h3><p>v₂ é o modo não trivial mais suave possível: varia pouco dentro de regiões coesas e concentra mudança nos gargalos.</p><div class="callout" style="margin-top:18px">O Fiedler vector emerge da função objetivo — não é uma escolha ad hoc.</div></div>
+</div>
+<div class="concept-strip"><span>v₁ é trivial</span><span>v₂ ⟂ 1</span><span>v₂ minimiza energia não trivial</span></div><div class="cite">[VL07; F73] Caracterização variacional do segundo autovetor.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Particionamento" data-title="Spectral bisection"><div class="section-ribbon"></div>
+<div class="section-label">III · Particionamento espectral</div><div class="slide-no"></div>
+<h2>Algoritmo: <span class="cyan">spectral bisection</span></h2>
+<div class="flow" style="margin-top:46px">
+<div class="node">G</div><div class="arrow">→</div><div class="node">L=D−A</div><div class="arrow">→</div><div class="node">(λ₂,v₂)</div><div class="arrow">→</div><div class="node">threshold</div><div class="arrow">→</div><div class="node">C₁,C₂</div>
+</div>
+<div class="grid3" style="margin-top:38px">
+<div class="card reveal" data-step="1"><h3>1 · Operador</h3><p>Construir o Laplaciano apropriado.</p></div>
+<div class="card reveal" data-step="2"><h3>2 · Coordenada</h3><p>Extrair o Fiedler vector.</p></div>
+<div class="card reveal" data-step="3"><h3>3 · Discretização</h3><p>Converter a coordenada contínua em dois grupos.</p></div>
+</div>
+<div class="academic-note"><b>Escolha do threshold.</b> t=0 é didático; sweep cuts sobre a ordenação de v₂ permitem selecionar um corte compatível com a função objetivo.</div><div class="cite">[VL07] Particionamento espectral por relaxação do problema de corte.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Spectral clustering" data-title="De 2 para k"><div class="section-ribbon"></div>
+<div class="section-label">IV · Spectral clustering</div><div class="slide-no"></div>
+<h2>De duas partes para <span class="cyan">k grupos</span></h2>
+<p class="lead">Uma única coordenada espectral é suficiente para uma bipartição. Para estrutura multigrupo, usamos um subespaço.</p>
+<div class="eq big">U = [u₁ u₂ ··· uₖ] ∈ ℝⁿˣᵏ</div>
+<div class="grid2" style="margin-top:24px">
+<div class="card"><h3>Colunas</h3><p>Autovetores associados aos menores autovalores relevantes.</p></div>
+<div class="card"><h3>Linhas</h3><p>A linha Uᵢ,: torna-se a representação do vértice i.</p></div>
+</div>
+<div class="academic-note"><b>Objeto geométrico.</b> Para k grupos, o subespaço gerado pelos autovetores é mais importante que o sinal de um único vetor. As linhas de U definem o embedding dos vértices.</div><div class="cite">[VL07] Unnormalized e normalized spectral clustering.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Spectral clustering" data-title="Embedding espectral"><div class="section-ribbon"></div>
+<div class="section-label">IV · Spectral clustering</div><div class="slide-no"></div>
+<h2>Embedding espectral: do grafo à <span class="cyan">geometria</span></h2>
+<div class="grid2" style="height:70%;align-items:center">
+<div class="graphbox" id="embedGraph" style="height:390px"></div>
+<div class="graphbox" id="embedScatter" style="height:390px"></div>
+</div>
+<div class="callout reveal" data-step="1" style="margin-top:15px">Objetivo: encontrar um espaço onde vértices estruturalmente semelhantes fiquem geometricamente próximos.</div>
+<div class="concept-strip"><span>estrutura combinatória</span><span>→</span><span>coordenadas em ℝᵏ</span><span>→</span><span>separação geométrica</span></div><div class="cite">[VL07] Interpretação geométrica do spectral embedding.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Spectral clustering" data-title="Algoritmo completo"><div class="section-ribbon"></div>
+<div class="section-label">IV · Spectral clustering</div><div class="slide-no"></div>
+<h2>Pipeline de <span class="cyan">spectral clustering</span></h2>
+<div class="flow" style="margin-top:36px">
+<div class="node">W / A</div><div class="arrow">→</div><div class="node">D</div><div class="arrow">→</div><div class="node">L*</div><div class="arrow">→</div><div class="node">U</div><div class="arrow">→</div><div class="node">k-means</div>
+</div>
+<div class="grid3" style="margin-top:40px">
+<div class="card reveal" data-step="1"><h3>Construção</h3><p>Grafo ou matriz de similaridade.</p></div>
+<div class="card reveal" data-step="2"><h3>Espectro</h3><p>Extrair k autovetores relevantes.</p></div>
+<div class="card reveal" data-step="3"><h3>Clusterização</h3><p>Agrupar linhas da representação espectral.</p></div>
+</div>
+<div class="academic-note"><b>Duas decisões diferentes.</b> O operador determina o embedding; o método de clustering discretiza esse embedding. Alterar um desses componentes pode mudar a partição final.</div><div class="cite">[VL07] Algoritmos clássicos de spectral clustering.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Spectral clustering" data-title="Qual Laplaciano?"><div class="section-ribbon"></div>
+<div class="section-label">IV · Spectral clustering</div><div class="slide-no"></div>
+<h2>Qual <span class="cyan">Laplaciano</span> utilizar?</h2>
+<div class="controls" style="margin:18px 0 16px"><button class="btn active lapBtn" data-lap="L">L</button><button class="btn lapBtn" data-lap="Lsym">L<sub>sym</sub></button><button class="btn lapBtn" data-lap="Lrw">L<sub>rw</sub></button></div>
+<div class="card" id="lapPanel" style="min-height:330px"></div>
+<div class="callout reveal" data-step="1" style="margin-top:18px">A normalização não é cosmética: muda a função objetivo e a sensibilidade à distribuição de graus.</div>
+<div class="academic-note"><b>Critério prático.</b> L é diretamente associado a RatioCut; as versões normalizadas tratam explicitamente o efeito dos graus e estão ligadas a normalized cut / random walks.</div><div class="cite">[VL07] Comparação entre unnormalized, Shi–Malik e Ng–Jordan–Weiss.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Spectral clustering" data-title="Random walks"><div class="section-ribbon"></div>
+<div class="section-label">IV · Spectral clustering</div><div class="slide-no"></div>
+<h2>Outra leitura: <span class="cyan">random walks</span></h2>
+<div class="grid2" style="align-items:center">
+<div class="graphbox" id="rwGraph" style="height:390px"></div>
+<div>
+<div class="eq">P = D⁻¹A</div><div class="eq">L<sub>rw</sub> = I − P</div>
+<p class="lead">Uma comunidade é uma região onde um passeio aleatório tende a permanecer antes de escapar por poucas arestas.</p>
+<button class="btn" id="walkBtn">▶ iniciar passeio</button>
+</div>
+</div>
+<div class="academic-note"><b>Interpretação probabilística.</b> Blocos com poucas arestas de saída apresentam alta probabilidade de permanência. O espectro de P=D⁻¹A descreve escalas de mistura e escape.</div><div class="cite">[VL07] Interpretação probabilística via random walks.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Spectral clustering" data-title="Eigengap"><div class="section-ribbon"></div>
+<div class="section-label">IV · Spectral clustering</div><div class="slide-no"></div>
+<h2>Quantos grupos? A heurística do <span class="cyan">eigengap</span></h2>
+<div class="grid2" style="align-items:center">
+<div><div class="spectrum" id="eigengapChart"></div><div class="controls" style="margin-top:14px"><label style="flex:1">k sugerido <input class="slider" id="kSlider" max="7" min="1" type="range" value="3"/></label><span class="value-chip" id="kVal">k=3</span></div></div>
+<div class="card"><h3>Intuição</h3><p>Se λ₁,…,λₖ são pequenos e existe um salto acentuado até λₖ₊₁, o grafo pode apresentar aproximadamente k blocos bem definidos.</p><div class="callout goldline">É uma heurística — não uma garantia universal de número “verdadeiro” de comunidades.</div></div>
+</div>
+<div class="academic-note"><b>Cuidado.</b> Autovalores próximos ou multiplicidades tornam a escolha de k instável. O eigengap deve ser confrontado com estabilidade e conhecimento do domínio.</div><div class="cite">[VL07] Eigengap e comportamento ideal de componentes quase desconectados.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Community detection" data-title="Partitioning vs community"><div class="section-ribbon"></div>
+<div class="section-label">V · Community detection</div><div class="slide-no"></div>
+<h2>Graph partitioning <span class="muted">≠</span> <span class="cyan">community detection</span></h2>
+<div class="grid2" style="margin-top:34px">
+<div class="card"><span class="kicker">Partitioning</span><h3 style="margin-top:16px">Qual corte é melhor?</h3><p>Parte de uma função de custo como cut, RatioCut ou Ncut.</p><p class="small">A estrutura procurada é definida pelo objetivo de particionamento.</p></div>
+<div class="card"><span class="kicker">Community detection</span><h3 style="margin-top:16px">Há mais arestas que o esperado?</h3><p>Compara a rede observada com um modelo nulo.</p><p class="small">A estrutura procurada é um desvio estatístico em relação ao baseline.</p></div>
+</div>
+<div class="eq reveal" data-step="1" style="margin-top:28px">“esperado” em relação a qual modelo?</div>
+<div class="concept-strip"><span>cut: objetivo geométrico</span><span>modularity: comparação estatística</span><span>operadores distintos</span></div><div class="cite">[VL07; N06] Diferença entre objetivos de corte e detecção por modelo nulo.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Community detection" data-title="Modularidade"><div class="section-ribbon"></div>
+<div class="section-label">V · Community detection</div><div class="slide-no"></div>
+<h2>Newman (2006): <span class="cyan">modularidade</span></h2>
+<div class="eq" style="font-size:33px">Q = (1/2m) Σᵢⱼ [ Aᵢⱼ − kᵢkⱼ/(2m) ] δ(cᵢ,cⱼ)</div>
+<div class="grid3" style="margin-top:26px">
+<div class="card reveal" data-step="1"><h3>Observado</h3><div class="metric">Aᵢⱼ</div><p>O que a rede realmente possui.</p></div>
+<div class="card reveal" data-step="2"><h3>Esperado</h3><div class="metric" style="font-size:36px">kᵢkⱼ/2m</div><p>Baseline preservando graus em expectativa.</p></div>
+<div class="card reveal" data-step="3"><h3>Excesso</h3><div class="metric">Q</div><p>Mais conectividade interna que o modelo nulo.</p></div>
+</div>
+<div class="academic-note"><b>Modelo nulo.</b> O termo k<sub>i</sub>k<sub>j</sub>/(2m) corresponde ao número esperado de arestas sob o configuration model em expectativa, preservando a sequência de graus como referência.</div><div class="cite">[N06] Modularity maximization como problema de community detection.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Community detection" data-title="Modularity matrix"><div class="section-ribbon"></div>
+<div class="section-label">V · Community detection</div><div class="slide-no"></div>
+<h2>A <span class="cyan">modularity matrix</span></h2>
+<div class="eq big">Bᵢⱼ = Aᵢⱼ − kᵢkⱼ/(2m)</div>
+<div class="grid2" style="align-items:center;margin-top:26px">
+<div class="card"><h3>Leitura de B</h3><ul class="clean"><li>Bᵢⱼ&gt;0: conexão acima do esperado;</li><li>Bᵢⱼ&lt;0: conexão abaixo do esperado;</li><li>B reorganiza community detection como um problema matricial.</li></ul></div>
+<div><div class="flow"><div class="node">rede</div><div class="arrow">→</div><div class="node">B</div><div class="arrow">→</div><div class="node">eigenspectrum</div></div><p class="small" style="text-align:center">Newman descreve B como desempenhando papel análogo ao Laplaciano em graph partitioning.</p></div>
+</div>
+<div class="concept-strip"><span>B1=0</span><span>Bᵢⱼ&gt;0: excesso</span><span>Bᵢⱼ&lt;0: déficit</span></div><div class="cite">[N06] Definição e interpretação da modularity matrix.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Community detection" data-title="Leading eigenvector"><div class="section-ribbon"></div>
+<div class="section-label">V · Community detection</div><div class="slide-no"></div>
+<h2>Leading eigenvector: <span class="cyan">formulação espectral</span></h2>
+<div class="grid2" style="align-items:center">
+<div>
+<div class="eq">Q = (1/4m) sᵀBs</div>
+<div class="eq reveal" data-step="1">sᵢ ∈ {−1,+1}</div>
+<p class="reveal" data-step="2">Relaxando a decisão discreta, a direção dominante de B fornece uma bipartição espectral.</p>
+</div>
+<div class="flow" style="flex-direction:column">
+<div class="node">B</div><div class="arrow" style="transform:rotate(90deg)">→</div><div class="node">v<sub>max</sub></div><div class="arrow" style="transform:rotate(90deg)">→</div><div class="node">sign(v<sub>max</sub>)</div><div class="arrow" style="transform:rotate(90deg)">→</div><div class="node">divisão recursiva</div>
+</div>
+</div>
+<div class="academic-note"><b>Critério de parada.</b> A divisão recursiva só é mantida quando produz ganho positivo de modularidade; não é necessário forçar uma quantidade fixa de grupos.</div><div class="cite">[N06] Leading eigenvector method.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Síntese" data-title="Um paradigma, dois operadores"><div class="section-ribbon"></div>
+<div class="section-label">VI · Síntese</div><div class="slide-no"></div>
+<h2>Um paradigma, <span class="cyan">dois operadores</span></h2>
+<table class="table" style="margin-top:28px">
+<thead><tr><th>Aspecto</th><th>Laplaciano</th><th>Modularity matrix</th></tr></thead>
+<tbody><tr><td>Operador</td><td>L = D − A</td><td>B = A − kkᵀ/(2m)</td></tr><tr><td>Objetivo</td><td>cuts / conectividade</td><td>modularidade</td></tr><tr><td>Autovetor-chave</td><td>v₂</td><td>v<sub>max</sub></td></tr><tr><td>Leitura</td><td>suavidade no grafo</td><td>excesso frente ao modelo nulo</td></tr><tr><td>Base</td><td>von Luxburg 2007</td><td>Newman 2006</td></tr></tbody>
+</table>
+<div class="eq reveal" data-step="1" style="margin-top:24px">a escolha do operador define a estrutura procurada</div>
+<div class="academic-note"><b>Leitura metodológica.</b> Escolher L ou B equivale a escolher uma hipótese sobre o que constitui “estrutura relevante”: suavidade/corte ou excesso de conectividade frente ao modelo nulo.</div><div class="cite">[VL07; N06] Comparação entre Laplaciano e matriz de modularidade.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Síntese" data-title="Newman 2013"><div class="section-ribbon"></div>
+<div class="section-label">VI · Síntese</div><div class="slide-no"></div>
+<h2>Newman (2013): <span class="cyan">conexões entre formulações</span></h2>
+<div class="grid3" style="margin-top:34px">
+<div class="card reveal" data-step="1"><h3>Normalized cuts</h3><p>Particionamento por objetivo de corte normalizado.</p></div>
+<div class="card reveal" data-step="2"><h3>Modularity</h3><p>Community detection via desvio do modelo nulo.</p></div>
+<div class="card reveal" data-step="3"><h3>Inference</h3><p>Community detection formulada estatisticamente.</p></div>
+</div>
+<div class="callout reveal" data-step="4" style="margin-top:30px">Sob escolhas específicas de parâmetros e dentro das aproximações espectrais analisadas, Newman mostra que os algoritmos podem tornar-se idênticos.</div>
+<p class="small reveal" data-step="5">O valor dessa observação é conceitual: métodos com motivações diferentes podem compartilhar a mesma estrutura algébrica.</p>
+<div class="academic-note"><b>Escopo do resultado.</b> A equivalência discutida por Newman depende de aproximações espectrais e parametrizações específicas; não implica que os objetivos originais sejam idênticos em geral.</div><div class="cite">[N13] Spectral methods for community detection and graph partitioning.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Código" data-title="Demonstração em Python"><div class="section-ribbon"></div>
+<div class="section-label">VII · Demonstração computacional</div><div class="slide-no"></div>
+<div class="grid2" style="align-items:center;height:82%">
+<div>
+<span class="live-badge">Python · VS Code</span>
+<h2 style="margin-top:18px">Demonstração com dados reais</h2>
+<p class="lead">A execução ao vivo usa o <b>Zachary’s Karate Club</b> para comparar duas bipartições espectrais sobre o mesmo grafo.</p>
+<div class="demo-steps">
+<div>Carregar a rede e construir A, D e L.</div>
+<div>Obter λ₂, v₂ e a bipartição de Fiedler.</div>
+<div>Construir B e extrair o leading eigenvector.</div>
+<div>Comparar partições, modularidade, ARI e NMI.</div>
+</div>
+</div>
+<div class="card">
+<span class="kicker">Ambiente</span>
+<h3 style="margin-top:16px">Bibliotecas</h3>
+<div class="concept-strip"><span>networkx</span><span>numpy</span><span>scipy</span><span>matplotlib</span><span>scikit-learn</span></div>
+<div class="eq" style="font-size:25px;margin-top:22px">G → L → v₂<br/><span class="muted">versus</span><br/>G → B → v<sub>max</sub></div>
+<div class="academic-note"><b>Formato da apresentação.</b> Este slide marca a troca para o VS Code; os dois próximos slides mantêm apenas os trechos essenciais para acompanhar a execução.</div>
+</div>
+</div>
+<div class="cite">Estudo de caso reproduzível com NetworkX; implementação completa será executada no VS Code.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Código" data-title="Código: Fiedler"><div class="section-ribbon"></div>
+<div class="section-label">VII · Código</div><div class="slide-no"></div>
+<h2>Código: Laplaciano + <span class="cyan">Fiedler</span></h2>
+<div class="code-wrap"><div class="code-head"><div class="dots"><i class="dot"></i><i class="dot"></i><i class="dot"></i></div><span>fiedler_demo.py</span><button class="copy" data-copy="code1">copiar</button></div><pre class="code" id="code1"><span class="kw">import</span> networkx <span class="kw">as</span> nx
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+
+G = nx.<span class="fn">karate_club_graph</span>()
+A = nx.<span class="fn">to_numpy_array</span>(G, weight=<span class="kw">None</span>)
+d = A.<span class="fn">sum</span>(axis=<span class="num">1</span>)
+L = np.<span class="fn">diag</span>(d) <span class="op">-</span> A
+
+<span class="cm"># Laplacian eigendecomposition</span>
+lam, U = np.linalg.<span class="fn">eigh</span>(L)
+v2 = U[:, <span class="num">1</span>]
+labels_L = (v2 <span class="op">&gt;=</span> <span class="num">0</span>).<span class="fn">astype</span>(int)
+
+<span class="fn">print</span>(<span class="str">"lambda_2 ="</span>, lam[<span class="num">1</span>])
+<span class="fn">print</span>(<span class="str">"groups ="</span>, np.<span class="fn">bincount</span>(labels_L))</pre></div><div class="terminal" style="margin-top:14px"><div class="terminal-head"><span>terminal · saída esperada</span><button class="output-toggle" data-terminal="termFiedler">mostrar saída</button></div><div class="terminal-body" data-hidden-output="lambda_2 = 0.468525
+groups = [15 19]
+ARI = 0.7717 · NMI = 0.7324 · Q = 0.3600" id="termFiedler">$ python fiedler_demo.py
+</div></div>
+<div class="grid3" style="margin-top:14px"><div class="card compact"><h3>Saída</h3><p>λ₂ ≈ 0.4685</p></div><div class="card compact"><h3>Partição</h3><p>15 / 19 vértices</p></div><div class="card compact"><h3>Implementação</h3><p>NumPy + NetworkX</p></div></div>
+<div class="cite">[VL07; F73] Trecho mínimo para a demonstração; execução completa no VS Code.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Código" data-title="Código: Newman"><div class="section-ribbon"></div>
+<div class="section-label">VII · Código</div><div class="slide-no"></div>
+<h2>Código: modularity matrix + <span class="cyan">leading eigenvector</span></h2>
+<div class="code-wrap"><div class="code-head"><div class="dots"><i class="dot"></i><i class="dot"></i><i class="dot"></i></div><span>newman_demo.py</span><button class="copy" data-copy="code2">copiar</button></div><pre class="code" id="code2">k = A.<span class="fn">sum</span>(axis=<span class="num">1</span>)
+m = A.<span class="fn">sum</span>() / <span class="num">2</span>
+
+<span class="cm"># Newman modularity matrix</span>
+B = A <span class="op">-</span> np.<span class="fn">outer</span>(k, k) / (<span class="num">2</span> * m)
+mu, V = np.linalg.<span class="fn">eigh</span>(B)
+vmax = V[:, np.<span class="fn">argmax</span>(mu)]
+labels_B = (vmax <span class="op">&gt;=</span> <span class="num">0</span>).<span class="fn">astype</span>(int)
+
+<span class="cm"># Compare with observed split</span>
+truth = np.<span class="fn">array</span>([
+    <span class="num">0</span> <span class="kw">if</span> G.nodes[i][<span class="str">"club"</span>] == <span class="str">"Mr. Hi"</span> <span class="kw">else</span> <span class="num">1</span>
+    <span class="kw">for</span> i <span class="kw">in</span> G.nodes()
+])</pre></div><div class="terminal" style="margin-top:14px"><div class="terminal-head"><span>terminal · saída esperada</span><button class="output-toggle" data-terminal="termNewman">mostrar saída</button></div><div class="terminal-body" data-hidden-output="largest_eigenvalue(B) = 4.977080
+groups = [18 16]
+ARI = 0.8823 · NMI = 0.8372 · Q = 0.3715" id="termNewman">$ python newman_demo.py
+</div></div>
+<div class="academic-note"><b>Comparabilidade.</b> A mesma matriz A e a mesma rede são utilizadas nos dois métodos; muda apenas o operador e, portanto, a função estrutural otimizada.</div><div class="cite">[N06] Trecho mínimo da bipartição pela modularity matrix.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Experimento" data-title="Karate Club"><div class="section-ribbon"></div>
+<div class="section-label">VIII · Estudo de caso</div><div class="slide-no"></div>
+<h2>Zachary's <span class="cyan">Karate Club</span></h2>
+<div class="grid2" style="align-items:center">
+<div class="graphbox" id="karateIntro" style="height:430px"></div>
+<div>
+<div class="grid3"><div class="card compact"><div class="metric">34</div><p>vértices</p></div><div class="card compact"><div class="metric">78</div><p>arestas</p></div><div class="card compact"><div class="metric">2</div><p>facções observadas</p></div></div>
+<p class="lead" style="margin-top:24px">Rede social de um clube de karatê que sofreu uma divisão real em dois grupos.</p>
+<div class="callout reveal" data-step="1">Usamos a mesma rede para testar Fiedler (L) e leading eigenvector (B).</div>
+</div>
+</div>
+<div class="academic-note"><b>Uso correto do benchmark.</b> A divisão observada oferece uma referência empírica para comparação, mas não deve ser interpretada como único ótimo possível para toda função de custo.</div><div class="cite">[Z77] Zachary, W. W. (1977), Journal of Anthropological Research 33(4):452–473.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Experimento" data-title="Resultados interativos"><div class="section-ribbon"></div>
+<div class="section-label">VIII · Estudo de caso</div><div class="slide-no"></div>
+<h2>Mesmo grafo, <span class="cyan">três leituras</span></h2>
+<div class="grid2" style="gap:22px">
+<div><div class="controls" style="margin-bottom:12px"><button class="btn resultBtn active" data-mode="truth">Observado</button><button class="btn resultBtn" data-mode="fiedler">Fiedler</button><button class="btn resultBtn gold" data-mode="newman">Newman</button></div><div class="graphbox" id="karateResult" style="height:430px"></div></div>
+<div class="card" id="resultPanel" style="height:430px"></div>
+</div>
+<div class="academic-note"><b>Leitura dos resultados.</b> ARI/NMI medem concordância com a divisão observada; Q mede modularidade da partição. Como os objetivos são diferentes, melhor concordância empírica e maior modularidade não são consequências necessárias do mesmo operador.</div><div class="cite">Métricas calculadas localmente sobre NetworkX karate_club_graph().</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Discussão" data-title="Limitações e fronteira"><div class="section-ribbon"></div>
+<div class="section-label">IX · Discussão</div><div class="slide-no"></div>
+<h2>Limitações e <span class="cyan">fronteira</span></h2>
+<div class="grid3" style="margin-top:24px">
+<div class="card"><h3>Computacionais</h3><ul class="clean"><li>eigensolvers em larga escala;</li><li>memória para operadores densos;</li><li>necessidade de métodos sparse.</li></ul></div>
+<div class="card"><h3>Estruturais</h3><ul class="clean"><li>heterogeneidade de graus;</li><li>grupos desbalanceados;</li><li>escolha de k e do operador.</li></ul></div>
+<div class="card"><h3>Modelagem</h3><ul class="clean"><li>overlapping communities;</li><li>multiescala;</li><li>redes dirigidas / temporais.</li></ul></div>
+</div>
+<div class="flow" style="margin-top:24px"><div class="node">L clássico</div><div class="arrow">→</div><div class="node">non-backtracking</div><div class="arrow">→</div><div class="node">Bethe Hessian</div><div class="arrow">→</div><div class="node">multilayer / temporal</div></div>
+<div class="concept-strip"><span>escala</span><span>heterogeneidade</span><span>resolução</span><span>direcionalidade</span><span>dinâmica temporal</span></div><div class="cite">Extensões citadas como perspectiva; fora do escopo técnico central do seminário.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Conclusão" data-title="Conclusões"><div class="section-ribbon"></div>
+<div class="section-label">X · Conclusão</div><div class="slide-no"></div>
+<h2>Conclusões</h2>
+<div class="grid3" style="margin-top:38px">
+<div class="card reveal" data-step="1"><div class="metric">1</div><h3>O espectro é estrutural</h3><p>Autovalores e autovetores codificam conectividade, gargalos e subespaços de grupos.</p></div>
+<div class="card reveal" data-step="2"><div class="metric">2</div><h3>O operador importa</h3><p>L e B respondem a objetivos distintos: cuts e modularidade.</p></div>
+<div class="card reveal" data-step="3"><div class="metric">3</div><h3>Relaxar torna tratável</h3><p>Problemas combinatórios são aproximados por autoproblemas de álgebra linear.</p></div>
+</div>
+<div class="eq big reveal" data-step="4" style="margin-top:34px">G → M → (λ,v) → estrutura</div>
+<div class="academic-note"><b>Resultado conceitual.</b> Métodos espectrais são relaxações estruturadas: trocam uma busca combinatória por um problema algébrico cuja solução depende explicitamente do operador e do objetivo escolhidos.</div><div class="cite">[VL07; N06; N13] Síntese das formulações discutidas.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+<section class="slide" data-section="Referências" data-title="Referências"><div class="section-ribbon"></div>
+<div class="section-label">Referências</div><div class="slide-no"></div>
+<h2>Referências principais</h2>
+<div class="card" style="padding:0;margin-top:24px">
+<div class="refitem"><b>[VL07] von Luxburg, U. (2007).</b> <span>A Tutorial on Spectral Clustering. Statistics and Computing, 17(4), 395–416. DOI: 10.1007/s11222-007-9033-z.</span></div>
+<div class="refitem"><b>[N06] Newman, M. E. J. (2006).</b> <span>Finding community structure in networks using the eigenvectors of matrices. Physical Review E, 74, 036104. DOI: 10.1103/PhysRevE.74.036104.</span></div>
+<div class="refitem"><b>[N13] Newman, M. E. J. (2013).</b> <span>Spectral methods for community detection and graph partitioning. Physical Review E, 88, 042822. DOI: 10.1103/PhysRevE.88.042822.</span></div>
+<div class="refitem"><b>[Z77] Zachary, W. W. (1977).</b> <span>An Information Flow Model for Conflict and Fission in Small Groups. Journal of Anthropological Research, 33(4), 452–473.</span></div>
+</div>
+<p class="small" style="margin-top:20px">Atalhos: ←/→ navegar · Espaço revelar · O visão geral · T cronômetro · H ajuda · F tela cheia.</p>
+<div class="grid3" style="margin-top:14px">
+<div class="card compact"><h3>[F73]</h3><p class="small">Fiedler, M. (1973). <i>Algebraic connectivity of graphs</i>. Czechoslovak Mathematical Journal, 23, 298–305. DOI 10.21136/CMJ.1973.101168.</p></div>
+<div class="card compact"><h3>[SM00]</h3><p class="small">Shi, J.; Malik, J. (2000). <i>Normalized Cuts and Image Segmentation</i>. IEEE TPAMI, 22(8), 888–905. DOI 10.1109/34.868688.</p></div>
+<div class="card compact"><h3>[NJW01]</h3><p class="small">Ng, A. Y.; Jordan, M. I.; Weiss, Y. (2001). <i>On Spectral Clustering: Analysis and an Algorithm</i>. NeurIPS.</p></div>
+</div><div class="cite">Referências utilizadas na fundamentação teórica e no estudo de caso.</div>
+<div class="author-footer"><strong>Marco Fidel Mayta Quispe</strong> · PhD Student · ICMC-USP</div></section>
+</div>
+<div id="progress"></div>
+<div id="nav"><button class="navbtn" id="prevBtn">←</button><button class="navbtn" id="nextBtn">→</button><button class="navbtn" id="overviewBtn">▦</button><button class="navbtn" id="helpBtn">?</button></div>
+<div id="timer">00:00</div>
+<div id="overview"><h2 style="margin-top:0">Visão geral</h2><div class="thumb-grid" id="thumbGrid"></div></div>
+<div id="help"><div class="modal"><h2 style="margin-top:0">Controles</h2><div class="grid2"><p><span class="kbd">→</span> próxima etapa/slide</p><p><span class="kbd">←</span> slide anterior</p><p><span class="kbd">Space</span> revelar conteúdo</p><p><span class="kbd">O</span> visão geral</p><p><span class="kbd">T</span> cronômetro</p><p><span class="kbd">F</span> tela cheia</p><p><span class="kbd">R</span> reiniciar animações</p><p><span class="kbd">H</span> ajuda</p></div><button class="btn" id="closeHelp">fechar</button></div></div>
+<script>
+const KARATE = {"coords": {"0": [0.38908, 0.67983], "1": [0.48665, 0.63164], "2": [0.54148, 0.50619], "3": [0.52593, 0.73548], "4": [0.23078, 0.82026], "5": [0.14701, 0.80614], "6": [0.1473, 0.71915], "7": [0.46922, 0.75423], "8": [0.64251, 0.47212], "9": [0.69035, 0.03879], "10": [0.19279, 0.93406], "11": [0.31476, 0.99451], "12": [0.56391, 0.57188], "13": [0.58706, 0.6314], "14": [0.89141, 0.12057], "15": [0.8649, 0.45318], "16": [0.0, 0.80785], "17": [0.4255, 1.0], "18": [0.98391, 0.15009], "19": [0.43235, 0.44965], "20": [0.86908, 0.00479], "21": [0.32221, 0.4624], "22": [0.93035, 0.41608], "23": [0.7449, 0.14209], "24": [0.51385, 0.0], "25": [0.61765, 0.05188], "26": [1.0, 0.2979], "27": [0.63369, 0.17258], "28": [0.53982, 0.28831], "29": [0.89098, 0.23862], "30": [0.72063, 0.51886], "31": [0.60506, 0.25836], "32": [0.78192, 0.28861], "33": [0.74917, 0.32277]}, "edges": [[0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6], [0, 7], [0, 8], [0, 10], [0, 11], [0, 12], [0, 13], [0, 17], [0, 19], [0, 21], [0, 31], [1, 2], [1, 3], [1, 7], [1, 13], [1, 17], [1, 19], [1, 21], [1, 30], [2, 3], [2, 7], [2, 8], [2, 9], [2, 13], [2, 27], [2, 28], [2, 32], [3, 7], [3, 12], [3, 13], [4, 6], [4, 10], [5, 6], [5, 10], [5, 16], [6, 16], [8, 30], [8, 32], [8, 33], [9, 33], [13, 33], [14, 32], [14, 33], [15, 32], [15, 33], [18, 32], [18, 33], [19, 33], [20, 32], [20, 33], [22, 32], [22, 33], [23, 25], [23, 27], [23, 29], [23, 32], [23, 33], [24, 25], [24, 27], [24, 31], [25, 31], [26, 29], [26, 33], [27, 33], [28, 31], [28, 33], [29, 32], [29, 33], [30, 32], [30, 33], [31, 32], [31, 33], [32, 33]], "truth": [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], "fiedler": [0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], "newman": [1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "v2": [-0.112137, -0.041288, 0.023219, -0.0555, -0.284605, -0.323727, -0.323727, -0.052586, 0.051601, 0.092801, -0.284605, -0.210993, -0.109461, -0.014742, 0.162751, 0.162751, -0.422765, -0.100181, 0.162751, -0.013637, 0.162751, -0.100181, 0.162751, 0.155695, 0.153026, 0.160963, 0.18711, 0.127664, 0.095152, 0.16765, 0.0735, 0.098753, 0.130345, 0.118903], "vmax": [0.387543, 0.269557, 0.131899, 0.253452, 0.134003, 0.145738, 0.145738, 0.20936, -0.054476, -0.047852, 0.134003, 0.077843, 0.128744, 0.135029, -0.139433, -0.139433, 0.058518, 0.13198, -0.139433, 0.057649, -0.139433, 0.13198, -0.139433, -0.216747, -0.05633, -0.0754, -0.115803, -0.102765, -0.06834, -0.206295, -0.096264, -0.101857, -0.323905, -0.369838], "evals": [-0.0, 0.468525, 0.909248, 1.125011, 1.259404, 1.599283, 1.761899, 1.826055, 1.95505, 2.0], "metrics": {"ari_f": 0.7717250324254216, "nmi_f": 0.7323776321005694, "ari_b": 0.8822575413558222, "nmi_b": 0.8371694628777809, "mod_truth": 0.39143756676224206, "mod_f": 0.3476602762317048, "mod_b": 0.40362811791383213}};
+const slides=[...document.querySelectorAll('.slide')]; let current=0; let revealIndex=0; let timerStart=null; let timerInt=null;
+slides.forEach((s,i)=>{s.querySelector('.slide-no').textContent=`${String(i+1).padStart(2,'0')} / ${String(slides.length).padStart(2,'0')}`});
+function activate(i){i=Math.max(0,Math.min(slides.length-1,i));slides.forEach((s,j)=>{s.classList.toggle('active',j===i);s.classList.toggle('prev',j<i)});current=i;revealIndex=0;slides[current].querySelectorAll('.reveal').forEach(x=>x.classList.remove('show'));document.getElementById('progress').style.width=`${((i+1)/slides.length)*100}%`;history.replaceState(null,'',`#${i+1}`);runSlideInit(i)}
+function next(){const r=[...slides[current].querySelectorAll('.reveal')];if(revealIndex<r.length){r[revealIndex++].classList.add('show');return;}activate(current+1)}
+function prev(){activate(current-1)}
+function resetAnim(){revealIndex=0;slides[current].querySelectorAll('.reveal').forEach(x=>x.classList.remove('show'));runSlideInit(current)}
+document.getElementById('nextBtn').onclick=next;document.getElementById('prevBtn').onclick=prev;
+document.addEventListener('keydown',e=>{if(['INPUT','TEXTAREA'].includes(document.activeElement.tagName))return;if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();next()}else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev()}else if(e.key.toLowerCase()==='o')toggleOverview();else if(e.key.toLowerCase()==='h')toggleHelp();else if(e.key.toLowerCase()==='t')toggleTimer();else if(e.key.toLowerCase()==='r')resetAnim();else if(e.key.toLowerCase()==='f')document.documentElement.requestFullscreen?.()});
+slides.forEach(s=>s.addEventListener('click',e=>{if(e.target.closest('button,input,a,.interactive-panel,.code-wrap'))return;next()}));
+function toggleTimer(){const t=document.getElementById('timer');if(t.style.display==='block'){t.style.display='none';return}t.style.display='block';if(!timerStart){timerStart=Date.now();timerInt=setInterval(()=>{const sec=Math.floor((Date.now()-timerStart)/1000);t.textContent=`${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`},500)}}
+function toggleHelp(){const h=document.getElementById('help');h.style.display=h.style.display==='grid'?'none':'grid'}
+document.getElementById('helpBtn').onclick=toggleHelp;document.getElementById('closeHelp').onclick=toggleHelp;
+function toggleOverview(){const o=document.getElementById('overview');if(o.style.display==='block'){o.style.display='none';return}const g=document.getElementById('thumbGrid');g.innerHTML='';slides.forEach((s,i)=>{const d=document.createElement('div');d.className='thumb';d.innerHTML=`<b>${String(i+1).padStart(2,'0')} · ${s.dataset.section||''}</b><div>${s.dataset.title||''}</div><p>${s.querySelector('.cite')?.textContent||''}</p>`;d.onclick=()=>{o.style.display='none';activate(i)};g.appendChild(d)});o.style.display='block'}
+document.getElementById('overviewBtn').onclick=toggleOverview;
+
+function svgGraph(container,nodes,edges,opts={}){const el=typeof container==='string'?document.getElementById(container):container;if(!el)return;const w=opts.w||600,h=opts.h||380;let s=`<svg viewBox="0 0 ${w} ${h}">`;edges.forEach((e,idx)=>{const a=nodes[e[0]],b=nodes[e[1]];const cls=opts.bridgeIndex===idx?'edge-svg bridge':'edge-svg';s+=`<line class="${cls}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/>`});nodes.forEach((n,i)=>{const c=n.c||'node-neutral';s+=`<circle data-node="${i}" class="node-svg ${c}" cx="${n.x}" cy="${n.y}" r="${n.r||15}"/>`;if(opts.labels!==false)s+=`<text class="node-label" x="${n.x}" y="${n.y+3}" text-anchor="middle">${n.label??i+1}</text>`});s+='</svg>';el.innerHTML=s}
+const clusterNodes=[...Array(10)].map((_,i)=>({x:(i<5?120:430)+(i%5)*34,y:90+(i%5)*52+(i%2)*22,label:i+1,c:i<5?'node-a':'node-b'}));const clusterEdges=[[0,1],[0,2],[1,2],[1,3],[2,3],[2,4],[3,4],[5,6],[5,7],[6,7],[6,8],[7,8],[7,9],[8,9],[4,5]];svgGraph('motivationGraph',clusterNodes,clusterEdges,{bridgeIndex:14});
+const tinyNodes=[{x:120,y:80,label:1},{x:270,y:80,label:2},{x:180,y:230,label:3},{x:360,y:230,label:4}];const tinyEdges=[[0,1],[0,2],[1,2],[2,3]];svgGraph('tinyGraph',tinyNodes,tinyEdges);
+function matrix(id,arr,diag=false){const el=document.getElementById(id);el.innerHTML='';arr.flat().forEach((v,idx)=>{const s=document.createElement('span');s.textContent=v;if(diag&&Math.floor(idx/4)===idx%4&&v!==0)s.className='diag';else if(v!==0)s.className='edge';el.appendChild(s)})}
+matrix('matA',[[0,1,1,0],[1,0,1,0],[1,1,0,1],[0,0,1,0]]);matrix('matD',[[2,0,0,0],[0,2,0,0],[0,0,3,0],[0,0,0,1]],true);
+const smoothNodes=[{x:80,y:190,label:'−.4',c:'node-a'},{x:180,y:135,label:'−.3',c:'node-a'},{x:280,y:190,label:'−.2',c:'node-a'},{x:410,y:190,label:'+.2',c:'node-b'},{x:510,y:135,label:'+.3',c:'node-b'}];svgGraph('smoothGraph',smoothNodes,[[0,1],[1,2],[2,3],[3,4]],{bridgeIndex:2});
+svgGraph('componentsGraph',[{x:90,y:170,c:'node-a'},{x:180,y:90,c:'node-a'},{x:250,y:190,c:'node-a'},{x:420,y:110,c:'node-b'},{x:520,y:200,c:'node-b'}],[[0,1],[1,2],[0,2],[3,4]],{labels:false});
+svgGraph('bottleneckGraph',clusterNodes,clusterEdges,{bridgeIndex:14,labels:false});
+svgGraph('cutGraph',clusterNodes,clusterEdges,{bridgeIndex:14,labels:false});
+svgGraph('embedGraph',clusterNodes,clusterEdges,{bridgeIndex:14,labels:false});
+
+const fVals=[-.36,-.31,-.23,-.15,-.08,.07,.15,.22,.31,.37];function updateFiedler(){const t=parseFloat(document.getElementById('fiedlerThreshold').value);document.getElementById('thrVal').textContent=t.toFixed(2);const ns=clusterNodes.map((n,i)=>({...n,c:fVals[i]<=t?'node-a':'node-b',label:(i+1)}));svgGraph('fiedlerGraph',ns,clusterEdges,{bridgeIndex:14});}document.getElementById('fiedlerThreshold').oninput=updateFiedler;updateFiedler();
+
+function scatter(){const el=document.getElementById('embedScatter'),w=600,h=390;let s=`<svg viewBox="0 0 ${w} ${h}"><line x1="50" y1="340" x2="560" y2="340" stroke="#4b5c78"/><line x1="50" y1="40" x2="50" y2="340" stroke="#4b5c78"/>`;const pts=[[120,260],[155,230],[185,275],[205,220],[145,290],[420,120],[455,150],[490,105],[510,165],[450,95]];pts.forEach((p,i)=>s+=`<circle cx="${p[0]}" cy="${p[1]}" r="10" fill="${i<5?'#5ee7ff':'#9b8cff'}"><animate attributeName="r" values="0;10" dur=".5s" begin="${i*.05}s" fill="freeze"/></circle>`);s+=`<text x="290" y="375" fill="#aab8d1" font-size="14">u₂</text><text x="14" y="180" fill="#aab8d1" font-size="14">u₃</text></svg>`;el.innerHTML=s}scatter();
+
+const lapData={L:{title:'L = D − A',sub:'Laplaciano não normalizado',body:'Natural para RatioCut. Simétrico, simples e diretamente ligado à energia do grafo.',foot:'Sensível à distribuição de graus quando há forte heterogeneidade.'},Lsym:{title:'Lsym = I − D⁻¹ᐟ² A D⁻¹ᐟ²',sub:'Laplaciano simétrico normalizado',body:'Mantém simetria e normaliza a contribuição dos graus. Base do algoritmo Ng–Jordan–Weiss.',foot:'Usado quando a escala de graus deve ser compensada.'},Lrw:{title:'Lrw = I − D⁻¹A',sub:'Random-walk Laplacian',body:'Conecta spectral clustering a uma cadeia de Markov com P=D⁻¹A.',foot:'A interpretação probabilística associa comunidades a regiões de alta permanência.'}};
+function setLap(k){document.querySelectorAll('.lapBtn').forEach(b=>b.classList.toggle('active',b.dataset.lap===k));const d=lapData[k];document.getElementById('lapPanel').innerHTML=`<span class="kicker">${d.sub}</span><div class="eq big">${d.title}</div><p class="lead">${d.body}</p><div class="callout">${d.foot}</div>`}document.querySelectorAll('.lapBtn').forEach(b=>b.onclick=()=>setLap(b.dataset.lap));setLap('L');
+
+const rwNodes=clusterNodes.map(x=>({...x}));svgGraph('rwGraph',rwNodes,clusterEdges,{bridgeIndex:14,labels:false});let walkTimer=null;const adj=Array.from({length:10},()=>[]);clusterEdges.forEach(([a,b])=>{adj[a].push(b);adj[b].push(a)});document.getElementById('walkBtn').onclick=()=>{if(walkTimer){clearInterval(walkTimer);walkTimer=null;document.getElementById('walkBtn').textContent='▶ iniciar passeio';return}let cur=1;document.getElementById('walkBtn').textContent='■ parar';const tick=()=>{document.querySelectorAll('#rwGraph circle').forEach((c,i)=>{c.setAttribute('r',i===cur?'22':'15');c.style.filter=i===cur?'drop-shadow(0 0 14px #f5c76b)':'none'});const nb=adj[cur];cur=nb[Math.floor(Math.random()*nb.length)]};tick();walkTimer=setInterval(tick,650)};
+
+const egVals=[0,.03,.05,.08,.72,.9,1.05,1.3];function renderGap(){const k=parseInt(document.getElementById('kSlider').value);document.getElementById('kVal').textContent=`k=${k}`;const el=document.getElementById('eigengapChart');el.innerHTML='';egVals.forEach((v,i)=>{const b=document.createElement('div');b.className='bar'+(i===k?' gap':'');b.style.height=`${Math.max(5,v/1.3*180)}px`;b.innerHTML=`<span>${v.toFixed(2)}</span>`;el.appendChild(b)})}document.getElementById('kSlider').oninput=renderGap;renderGap();
+
+
+document.querySelectorAll('.copy').forEach(b=>b.onclick=async()=>{const t=document.getElementById(b.dataset.copy).innerText;try{await navigator.clipboard.writeText(t);b.textContent='copiado ✓';setTimeout(()=>b.textContent='copiar',1200)}catch(e){b.textContent='selecione manualmente'}});
+
+function karateSVG(id,mode='neutral'){const el=document.getElementById(id);if(!el)return;const w=620,h=430,pad=28;let s=`<svg viewBox="0 0 ${w} ${h}">`;KARATE.edges.forEach(([a,b])=>{const pa=KARATE.coords[a],pb=KARATE.coords[b];s+=`<line class="edge-svg" x1="${pad+pa[0]*(w-2*pad)}" y1="${pad+(1-pa[1])*(h-2*pad)}" x2="${pad+pb[0]*(w-2*pad)}" y2="${pad+(1-pb[1])*(h-2*pad)}"/>`});const labels=mode==='neutral'?null:KARATE[mode];Object.keys(KARATE.coords).forEach(k=>{const i=+k,p=KARATE.coords[k];const fill=labels?(labels[i]===0?'#5ee7ff':'#9b8cff'):'#cad6e9';const r=(i===0||i===33)?10:7;s+=`<circle cx="${pad+p[0]*(w-2*pad)}" cy="${pad+(1-p[1])*(h-2*pad)}" r="${r}" fill="${fill}" stroke="#08101f" stroke-width="1.2"><title>node ${i}</title></circle>`});s+='</svg>';el.innerHTML=s}
+karateSVG('karateIntro','neutral');karateSVG('karateResult','truth');
+function setResult(mode){document.querySelectorAll('.resultBtn').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));karateSVG('karateResult',mode);const M=KARATE.metrics;let html='';if(mode==='truth'){html=`<span class="kicker">Divisão observada</span><h3 style="margin-top:16px">Estrutura histórica</h3><p>17 / 17 vértices nas duas facções registradas no dataset.</p><div class="metric">Q = ${M.mod_truth.toFixed(3)}</div><p class="small">A divisão observada é referência empírica, não um ótimo matemático obrigatório.</p>`}else if(mode==='fiedler'){html=`<span class="kicker">Laplaciano</span><h3 style="margin-top:16px">Bipartição pelo Fiedler vector</h3><div class="grid2"><div><div class="metric">${M.ari_f.toFixed(3)}</div><p>ARI</p></div><div><div class="metric">${M.nmi_f.toFixed(3)}</div><p>NMI</p></div></div><div class="eq" style="font-size:24px">Q = ${M.mod_f.toFixed(3)}</div><p class="small">O objetivo original é corte/suavidade — não maximização direta de modularidade.</p>`}else{html=`<span class="kicker">Newman</span><h3 style="margin-top:16px">Bipartição pelo leading eigenvector</h3><div class="grid2"><div><div class="metric">${M.ari_b.toFixed(3)}</div><p>ARI</p></div><div><div class="metric">${M.nmi_b.toFixed(3)}</div><p>NMI</p></div></div><div class="eq" style="font-size:24px">Q = ${M.mod_b.toFixed(3)}</div><p class="small">Nesta bipartição, o objetivo está diretamente alinhado à modularidade.</p>`}document.getElementById('resultPanel').innerHTML=html}
+document.querySelectorAll('.resultBtn').forEach(b=>b.onclick=()=>setResult(b.dataset.mode));setResult('truth');
+
+function runSlideInit(i){const title=slides[i].dataset.title;if(title==='Fiedler vector')updateFiedler();if(title==='Eigengap')renderGap();if(title==='Resultados interativos')setResult('truth')}
+const h=parseInt(location.hash.slice(1));if(h&&h>=1&&h<=slides.length)activate(h-1);else activate(0);
+
+// V2 interactions
+const energySlider=document.getElementById('energySlider');
+function updateEnergy(){if(!energySlider)return;const d=parseFloat(energySlider.value);const e=d*d;document.getElementById('energyVal').textContent=e.toFixed(2);document.getElementById('energyFill').style.width=`${Math.min(100,e/4*100)}%`;}
+if(energySlider){energySlider.addEventListener('input',updateEnergy);updateEnergy();}
+
+const combSlider=document.getElementById('combSlider');
+function sci(x){if(x<1e6)return Math.round(x).toLocaleString('pt-BR');const e=Math.floor(Math.log10(x)),m=x/10**e;return `≈${m.toFixed(2)}×10^${e}`;}
+function updateComb(){if(!combSlider)return;const n=parseInt(combSlider.value);const c=2**(n-1)-1;document.getElementById('combN').textContent=`n=${n}`;document.getElementById('combCount').textContent=sci(c);}
+if(combSlider){combSlider.addEventListener('input',updateComb);updateComb();}
+
+document.querySelectorAll('.output-toggle').forEach(btn=>btn.addEventListener('click',()=>{const el=document.getElementById(btn.dataset.terminal);if(!el)return;const base=el.textContent.split('\n')[0]+'\n';if(btn.dataset.open==='1'){el.textContent=base;btn.dataset.open='0';btn.textContent='mostrar saída';}else{el.textContent=base+el.dataset.hiddenOutput;btn.dataset.open='1';btn.textContent='ocultar saída';}}));
+
+</script>
+</body>
+</html>
